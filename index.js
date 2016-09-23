@@ -1,1 +1,1 @@
-module.exports = require('../build/Release/vle_js');
+module.exports = require('./build/Release/vle_js');
