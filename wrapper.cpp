@@ -8,7 +8,6 @@
 #include <node_object_wrap.h>
 #include <v8.h>
 
-#include <iostream>
 #include <sstream>
 
 using namespace vle;
@@ -28,7 +27,7 @@ private:
   {
     try {
       if (!thread_init) {
-	vle::Init app;
+	Init app;
 	
 	thread_init = true;
       }
@@ -59,110 +58,96 @@ private:
   static void run(const v8::FunctionCallbackInfo<v8::Value>& args);
 };
 
-Handle < Value > convert_value(const vle::value::Value& value,
+Handle < Value > convert_value(const value::Value& value,
 				Isolate* isolate)
 {
   EscapableHandleScope scope(isolate);
-  
-  if (value.getType() == vle::value::Value::DOUBLE) {
-    return scope.Escape(Number::New(isolate,
-				    vle::value::toDouble(value)));
-  } else if (value.getType() == vle::value::Value::BOOLEAN) {
-    return scope.Escape(Boolean::New(isolate,
-				     vle::value::toBoolean(value)));
-  } else if (value.getType() == vle::value::Value::INTEGER) {
-    return scope.Escape(Number::New(isolate,
-				    vle::value::toInteger(value)));
-  } else if (value.getType() == vle::value::Value::STRING) {
-    return scope.Escape(
-      String::NewFromUtf8(isolate,
-			  vle::value::toString(value).c_str()));
-  } else if (value.getType() == vle::value::Value::MAP) {
-    Handle < Object > result = Object::New(isolate);
 
-    for (vle::value::Map::const_iterator it = value.toMap().begin();
+  switch (value.getType()) {
+  case value::Value::DOUBLE: {
+    return scope.Escape(Number::New(isolate,
+				    value::toDouble(value)));
+  }
+  case value::Value::BOOLEAN: {
+    return scope.Escape(Boolean::New(isolate,
+				     value::toBoolean(value)));
+  }
+  case value::Value::INTEGER: {
+    return scope.Escape(Number::New(isolate,
+				    value::toInteger(value)));
+  }
+  case value::Value::STRING: {
+    return scope.Escape(String::NewFromUtf8(isolate,
+					    value::toString(value).c_str()));
+  }
+  case value::Value::XMLTYPE: {
+    return scope.Escape(String::NewFromUtf8(isolate,
+					    value::toXml(value).c_str()));
+  }
+  case value::Value::MAP: {
+    Handle < Object > result = Object::New(isolate);
+    
+    for (value::Map::const_iterator it = value.toMap().begin();
 	 it != value.toMap().end(); ++it) {
       result->Set(String::NewFromUtf8(isolate, it->first.c_str()),
 		  convert_value(*(it->second), isolate));
     }
     return scope.Escape(result);
-  } else if (value.getType() == vle::value::Value::SET) {
+  }
+  case value::Value::SET: {
     Handle < Array > result = Array::New(isolate);
     unsigned int i = 0;
     
-    for (vle::value::Set::const_iterator it = value.toSet().begin();
+    for (value::Set::const_iterator it = value.toSet().begin();
 	 it != value.toSet().end(); ++it) {
       result->Set(i, convert_value(**it, isolate));
       ++i;
     }    
     return scope.Escape(result);
-  } else {
-    return scope.Escape(Null(isolate));
   }
+  case value::Value::TUPLE: {
+    Handle < Array > result = Array::New(isolate);
+    unsigned int i = 0;
 
-  /*  case vle::value::Value::XMLTYPE: {
-    PyObject *class_ = PyObject_GetAttrString(pyvle, "VleXML");
-    PyObject* val = PyString_FromString(
-					vle::value::toXml(value).c_str());
-    PyObject* args = PyTuple_New(1);
-    PyTuple_SetItem(args, 0, val);
-    result = PyInstance_New(class_, args, NULL);
-    break;
-  }
-  case vle::value::Value::TUPLE: {
-    PyObject *class_ = PyObject_GetAttrString(pyvle, "VleTuple");
-    PyObject* val = PyList_New(0);
-    std::vector<double>::const_iterator itb =
-      value.toTuple().value().begin();
-    std::vector<double>::const_iterator ite =
-      value.toTuple().value().end();
-    for(;itb!=ite;itb++){
-      PyList_Append(val, PyFloat_FromDouble(*itb));
+    for(std::vector < double >::const_iterator it = value.toTuple().
+	  value().begin(); it != value.toTuple().value().end(); ++it){
+      result->Set(i, Number::New(isolate, *it));
+      ++i;
     }
-    PyObject* args = PyTuple_New(1);
-    PyTuple_SetItem(args, 0, val);
-    result = PyInstance_New(class_, args, NULL);
-    break;
+    return scope.Escape(result);
   }
-  case vle::value::Value::TABLE: {
-    PyObject *class_ = PyObject_GetAttrString(pyvle, "VleTable");
-    PyObject* val = PyList_New(0);
-    PyObject* r=0;
-    const vle::value::Table& t = value.toTable();
-    for(unsigned int i=0; i<t.height(); i++){
-      r = PyList_New(0);
-      for(unsigned int j=0; j<t.width(); j++){
-	PyList_Append(r,PyFloat_FromDouble(t.get(j,i)));
+  case value::Value::TABLE: {
+    Handle < Array > result = Array::New(isolate);
+    const value::Table& t = value.toTable();
+
+    for (unsigned int i = 0; i < t.height(); i++){
+      Handle < Array > line = Array::New(isolate);
+
+      for (unsigned int j = 0; j < t.width(); j++){
+	result->Set(j, Number::New(isolate, t.get(j,i)));
       }
-      PyList_Append(val,r);
+      result->Set(i, line);
     }
-    PyObject* args = PyTuple_New(1);
-    PyTuple_SetItem(args, 0, val);
-    result = PyInstance_New(class_, args, NULL);
-    break;
+    return scope.Escape(result);
   }
-  case vle::value::Value::MATRIX: {
-    PyObject *class_ = PyObject_GetAttrString(pyvle, "VleMatrix");
-    PyObject* val = PyList_New(0);
-    PyObject* r=0;
-    const vle::value::Matrix& t = value.toMatrix();
-    for(unsigned int i=0; i<t.rows(); i++){
-      r = PyList_New(0);
-      for(unsigned int j=0; j<t.columns(); j++){
-	PyList_Append(r,pyvle_convert_value(*t.get(j,i)));
+  case value::Value::MATRIX: {
+    Handle < Array > result = Array::New(isolate);
+    const value::Matrix& t = value.toMatrix();
+
+    for (unsigned int i = 0; i < t.rows(); i++){
+      Handle < Array > line = Array::New(isolate);
+
+      for (unsigned int j = 0; j < t.columns(); j++){
+	result->Set(j, convert_value(*t.get(j,i), isolate));
       }
-      PyList_Append(val,r);
+      result->Set(i, line);
     }
-    PyObject* args = PyTuple_New(1);
-    PyTuple_SetItem(args, 0, val);
-    result = PyInstance_New(class_, args, NULL);
-    break;
+    return scope.Escape(result);
   }
   default: {
-    result = Py_None;
-    break;
+    return scope.Escape(Null(isolate));
   }
-  }*/
+  }
 }
 
 void split(const std::string& str, char delim, std::vector < std::string >& vec)
@@ -216,16 +201,16 @@ void push(Local < Object >& dic, const std::vector < std::string > path,
   p->Set(String::NewFromUtf8(isolate, path.back().c_str()), value);
 }
 
-void build(Local < Object >& v, const vle::value::Matrix& matrix,
+void build(Local < Object >& v, const value::Matrix& matrix,
 	   Isolate* isolate)
 {
-  vle::value::ConstMatrixView view(matrix.value());
+  value::ConstMatrixView view(matrix.value());
   unsigned int nbcol = matrix.columns();
   unsigned int nbline = view.shape()[1];
 
   for(unsigned int c = 0; c < nbcol; c++){
     Local < Array > col = Array::New(isolate);
-    vle::value::ConstVectorView t = matrix.column(c);
+    value::ConstVectorView t = matrix.column(c);
 
     if (matrix.getString(c,0) == "time") {
       for (unsigned int i = 1; i < nbline; ++i) {
@@ -250,7 +235,7 @@ void build(Local < Object >& v, const vle::value::Matrix& matrix,
 
 void convert(const value::Map& out, Local < Object >& result, Isolate* isolate)
 {
-  for(vle::value::Map::const_iterator itb = out.begin(); itb != out.end();
+  for(value::Map::const_iterator itb = out.begin(); itb != out.end();
       ++itb) {
     Local < Object > view = Object::New(isolate);
 
