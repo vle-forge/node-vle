@@ -1,7 +1,7 @@
 {
   "targets": [
     {
-      "target_name": "vle_js",
+      "target_name": "vle_node",
       "sources": [ "wrapper.cpp" ],
       "include_dirs": [ "<!@(pkg-config --cflags-only-I vle-1.1 | sed s/-I//g)" ],
       "libraries": [ "<!@(pkg-config --libs vle-1.1)" ],

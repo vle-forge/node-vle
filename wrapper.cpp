@@ -339,4 +339,4 @@ void InitAll(Local<Object> exports) {
   VleWrapper::Init(exports);
 }
 
-NODE_MODULE(vle_js, InitAll)
+NODE_MODULE(vle_node, InitAll)
