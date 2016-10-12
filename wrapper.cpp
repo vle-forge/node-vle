@@ -20,7 +20,7 @@ class VleWrapper : public node::ObjectWrap
 {
 public:
   static void Init(Handle < Object > exports);
-  
+
 private:
   vpz::Vpz* _vpz;
 
@@ -29,17 +29,17 @@ private:
     try {
       if (!thread_init) {
 	vle::Init app;
-	
+
 	thread_init = true;
       }
       utils::Package pack(pkg_name);
       std::string filepath = pack.getExpFile(file_name);
-      
+
       _vpz = new vpz::Vpz(filepath);
 
       vpz::Outputs& outlst(_vpz->project().experiment().views().outputs());
       vpz::Outputs::iterator it;
-      
+
       for (it = outlst.begin(); it != outlst.end(); ++it) {
         it->second.setLocalStream("", "storage", "vle.output");
       }
@@ -53,7 +53,7 @@ private:
 
   static Persistent<Function> constructor;
 
-  static void New(const FunctionCallbackInfo<Value>& args);  
+  static void New(const FunctionCallbackInfo<Value>& args);
 
   static void experiment_set_begin(const FunctionCallbackInfo<Value>& args);
   static void experiment_get_begin(const FunctionCallbackInfo<Value>& args);
@@ -90,7 +90,7 @@ class ValueWrapper : public node::ObjectWrap
 {
 public:
   static void Init(Handle < Object > exports);
-  
+
   const value::Value* get_value() const
   { return _value; }
 
@@ -104,8 +104,8 @@ private:
   { if (_value) delete _value; }
 
   static Persistent<Function> constructor;
-  
-  static void New(const FunctionCallbackInfo<Value>& args);  
+
+  static void New(const FunctionCallbackInfo<Value>& args);
 
   static void get_type(const FunctionCallbackInfo<Value>& args);
 };
@@ -140,7 +140,7 @@ Handle < Value > convert_value(const value::Value& value,
   }
   case value::Value::MAP: {
     Handle < Object > result = Object::New(isolate);
-    
+
     for (value::Map::const_iterator it = value.toMap().begin();
 	 it != value.toMap().end(); ++it) {
       result->Set(String::NewFromUtf8(isolate, it->first.c_str()),
@@ -151,12 +151,12 @@ Handle < Value > convert_value(const value::Value& value,
   case value::Value::SET: {
     Handle < Array > result = Array::New(isolate);
     unsigned int i = 0;
-    
+
     for (value::Set::const_iterator it = value.toSet().begin();
 	 it != value.toSet().end(); ++it) {
       result->Set(i, convert_value(**it, isolate));
       ++i;
-    }    
+    }
     return scope.Escape(result);
   }
   case value::Value::TUPLE: {
@@ -208,7 +208,7 @@ void split(const std::string& str, char delim, std::vector < std::string >& vec)
 {
   std::stringstream ss;
   std::string item;
-  
+
   ss.str(str);
   while (getline(ss, item, delim)) {
     vec.push_back(item);
@@ -217,14 +217,14 @@ void split(const std::string& str, char delim, std::vector < std::string >& vec)
 
 void build_path(const std::string& str, std::vector < std::string >& path)
 {
-  // format: (,coupled_model)*:atomic_model.port 
+  // format: (,coupled_model)*:atomic_model.port
   split(str, ',', path);
   if (path[0].empty()) {
     std::vector < std::string > path2;
     std::vector < std::string > path3;
 
     path.erase(path.begin());
-    split(path[path.size() - 1], ':', path2);      
+    split(path[path.size() - 1], ':', path2);
     split(path2[path2.size() - 1], '.', path3);
     path.pop_back();
     path.push_back(path2[0]);
@@ -238,16 +238,16 @@ void push(Local < Object >& dic, const std::vector < std::string > path,
 {
   Local < Object > p = dic;
   unsigned int index = 0;
-  
+
   while (p->HasOwnProperty(String::NewFromUtf8(isolate, path[index].c_str()))) {
     p = Local < Object>::Cast(p->Get(String::NewFromUtf8(isolate,
 							 path[index].c_str())));
     ++index;
   }
-  if (index < path.size() - 2) {
+  if (index < path.size() - 1) {
     for (unsigned int i = index; i < path.size() - 1; ++i) {
       Local < Object > entry = Object::New(isolate);
-      
+
       p->Set(String::NewFromUtf8(isolate, path[i].c_str()), entry);
       p = entry;
     }
@@ -273,7 +273,7 @@ void build(Local < Object >& v, const value::Matrix& matrix,
       v->Set(String::NewFromUtf8(isolate, "time"), col);
     } else {
       std::vector < std::string > path;
-  
+
       build_path(matrix.getString(c,0), path);
       for (unsigned int i = 1; i < nbline; ++i) {
 	if (t[i]) {
@@ -303,7 +303,7 @@ void convert_list(const value::Matrix& out, Local < Array >& result,
 {
   for (unsigned int j = 0; j < out.columns(); j++) {
     Local < Array > line = Array::New(isolate);
-    
+
     for (unsigned int i = 0; i < out.column(0).size(); i++) {
       Local < Object > item = Object::New(isolate);
 
@@ -322,7 +322,7 @@ void ValueWrapper::Init(Handle<Object> exports)
 {
   Isolate* isolate = exports->GetIsolate();
   Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
-  
+
   tpl->SetClassName(String::NewFromUtf8(isolate, "Value"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
@@ -343,22 +343,22 @@ value::Value* convert_to_vle(Local < Value > v)
       if (value == static_cast < int >(value)) {
 	return value::Integer::create(static_cast < int >(value));
       } else {
-	return value::Double::create(value);	
+	return value::Double::create(value);
       }
     } else if (v->IsString()) {
       Local < String > arg = v->ToString();
       std::string value = *String::Utf8Value(arg);
 
-      return value::String::create(value);	
+      return value::String::create(value);
     } else if (v->IsBoolean()) {
       Local < Boolean > arg = v->ToBoolean();
       bool value = arg->Value();
 
-      return value::Boolean::create(value);	
+      return value::Boolean::create(value);
     } else if (v->IsArray()) {
       Local < Array > arg = Local < Array >::Cast(v);
       value::Set* result = value::Set::create();
-      
+
       for (unsigned int i = 0; i < arg->Length(); ++i) {
 	result->add(convert_to_vle(arg->Get(i)));
       }
@@ -367,10 +367,10 @@ value::Value* convert_to_vle(Local < Value > v)
       Local < Object > arg = Local < Object >::Cast(v);
       Local < Array > properties = arg->GetOwnPropertyNames();
       value::Map* result = value::Map::create();
-      
+
       for (unsigned int i = 0; i < properties->Length(); ++i) {
 	Local < Value > key = properties->Get(i);
-	
+
 	result->add(*String::Utf8Value(key),
 		    convert_to_vle(arg->Get(key)));
       }
@@ -383,7 +383,7 @@ value::Value* convert_to_vle(Local < Value > v)
 void ValueWrapper::New(const FunctionCallbackInfo<Value>& jsargs)
 {
   Isolate* isolate = jsargs.GetIsolate();
-  
+
   if (jsargs.IsConstructCall()) {
     ValueWrapper* obj = new ValueWrapper();
 
@@ -391,7 +391,7 @@ void ValueWrapper::New(const FunctionCallbackInfo<Value>& jsargs)
     obj->Wrap(jsargs.This());
     jsargs.GetReturnValue().Set(jsargs.This());
   } else {
-    
+
   }
 }
 
@@ -403,7 +403,7 @@ void VleWrapper::Init(Handle<Object> exports)
 {
   Isolate* isolate = exports->GetIsolate();
   Local<FunctionTemplate> tpl = FunctionTemplate::New(isolate, New);
-  
+
   tpl->SetClassName(String::NewFromUtf8(isolate, "Vle"));
   tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
@@ -440,7 +440,7 @@ void VleWrapper::Init(Handle<Object> exports)
 			    condition_delete_value);
   NODE_SET_PROTOTYPE_METHOD(tpl, "output_set_plugin", output_set_plugin);
   NODE_SET_PROTOTYPE_METHOD(tpl, "outputs_list", outputs_list);
-  
+
   constructor.Reset(isolate, tpl->GetFunction());
   exports->Set(String::NewFromUtf8(isolate, "Vle"),
 	       tpl->GetFunction());
@@ -449,18 +449,18 @@ void VleWrapper::Init(Handle<Object> exports)
 void VleWrapper::New(const FunctionCallbackInfo<Value>& jsargs)
 {
   Isolate* isolate = jsargs.GetIsolate();
-  
+
   if (jsargs.IsConstructCall()) {
     Local < String > arg0 = jsargs[0]->ToString();
     Local < String > arg1 = jsargs[1]->ToString();
     std::string pkgname = *String::Utf8Value(arg0);
     std::string filename = *String::Utf8Value(arg1);
     VleWrapper* obj = new VleWrapper(pkgname.c_str(), filename.c_str());
-    
+
     obj->Wrap(jsargs.This());
     jsargs.GetReturnValue().Set(jsargs.This());
   } else {
-    
+
   }
 }
 
@@ -472,7 +472,7 @@ void ValueWrapper::get_type(const FunctionCallbackInfo<Value>& args)
   ValueWrapper* obj = ObjectWrap::Unwrap<ValueWrapper>(args.Holder());
 
   assert(obj->_value == 0);
-  
+
   switch(obj->_value->getType()) {
   case vle::value::Value::DOUBLE: {
     args.GetReturnValue().Set(String::NewFromUtf8(isolate, "double"));
@@ -520,7 +520,7 @@ void VleWrapper::experiment_set_begin(const FunctionCallbackInfo<Value>& args)
   if (args.Length() > 0) {
     VleWrapper* obj = ObjectWrap::Unwrap<VleWrapper>(args.Holder());
     Local < Number > arg0 = args[0]->ToNumber();
-  
+
     obj->_vpz->project().experiment().setBegin(arg0->Value());
   }
 }
@@ -529,7 +529,7 @@ void VleWrapper::experiment_get_begin(const FunctionCallbackInfo<Value>& args)
 {
   Isolate* isolate = args.GetIsolate();
   VleWrapper* obj = ObjectWrap::Unwrap<VleWrapper>(args.Holder());
-  
+
   args.GetReturnValue().Set(Number::New(isolate,
 					obj->_vpz->project().experiment().
 					begin()));
@@ -541,7 +541,7 @@ void VleWrapper::experiment_set_duration(const FunctionCallbackInfo<Value>&
   if (args.Length() > 0) {
     VleWrapper* obj = ObjectWrap::Unwrap<VleWrapper>(args.Holder());
     Local < Number > arg0 = args[0]->ToNumber();
-    
+
     obj->_vpz->project().experiment().setDuration(arg0->Value());
   }
 }
@@ -551,7 +551,7 @@ void VleWrapper::experiment_get_duration(const FunctionCallbackInfo<Value>&
 {
   Isolate* isolate = args.GetIsolate();
   VleWrapper* obj = ObjectWrap::Unwrap<VleWrapper>(args.Holder());
-  
+
   args.GetReturnValue().Set(Number::New(isolate,
 					obj->_vpz->project().experiment().
 					duration()));
@@ -580,17 +580,17 @@ void VleWrapper::run(const FunctionCallbackInfo<Value>& args)
     manager::Simulation sim(manager::LOG_NONE,
 			    manager::SIMULATION_NONE,
 			    NULL);
-    
+
     //configure output plugins for column names
     for(vpz::Outputs::iterator it =
 	  obj->_vpz->project().experiment().views().outputs().begin();
 	it != obj->_vpz->project().experiment().views().outputs().end(); ++it) {
       vpz::Output& output = it->second;
-      
+
       if (output.package() == "vle.output" and
 	  output.plugin() == "storage") {
 	value::Map* configOutput = new value::Map();
-	
+
 	configOutput->addString("header", "top");
 	output.setData(configOutput);
       }
@@ -625,17 +625,17 @@ void VleWrapper::run_manager(const FunctionCallbackInfo<Value>& args)
     manager::Manager sim(manager::LOG_NONE,
 			 manager::SIMULATION_NONE,
 			 NULL);
-    
+
     //configure output plugins for column names
     for(vpz::Outputs::iterator it =
 	  obj->_vpz->project().experiment().views().outputs().begin();
 	it != obj->_vpz->project().experiment().views().outputs().end(); ++it) {
       vpz::Output& output = it->second;
-      
+
       if (output.package() == "vle.output" and
 	  output.plugin() == "storage") {
 	value::Map* configOutput = new value::Map();
-	
+
 	configOutput->addString("header", "top");
 	output.setData(configOutput);
       }
@@ -671,17 +671,17 @@ void VleWrapper::run_manager_thread(const FunctionCallbackInfo<Value>& args)
     manager::Manager sim(manager::LOG_NONE,
 			 manager::SIMULATION_NONE,
 			 NULL);
-    
+
     //configure output plugins for column names
     for(vpz::Outputs::iterator it =
 	  obj->_vpz->project().experiment().views().outputs().begin();
 	it != obj->_vpz->project().experiment().views().outputs().end(); ++it) {
       vpz::Output& output = it->second;
-      
+
       if (output.package() == "vle.output" and
 	  output.plugin() == "storage") {
 	value::Map* configOutput = new value::Map();
-	
+
 	configOutput->addString("header", "top");
 	output.setData(configOutput);
       }
@@ -741,7 +741,7 @@ void VleWrapper::condition_show(const FunctionCallbackInfo<Value>& args)
 
     if (size > 1) {
       Local < Array > result = Array::New(isolate);
-    
+
       for (int i = 0; i < size; ++i)
 	result->Set(i, convert_value(*v[i], isolate));
       args.GetReturnValue().Set(result);
@@ -818,7 +818,7 @@ void VleWrapper::condition_add_real(const FunctionCallbackInfo<Value>& args)
     double value = arg2->Value();
     vpz::Condition& cnd(obj->_vpz->project().experiment().
 			conditions().get(conditionname));
-  
+
     cnd.addValueToPort(portname, value::Double::create(value));
   }
 }
@@ -835,7 +835,7 @@ void VleWrapper::condition_add_integer(const FunctionCallbackInfo<Value>& args)
     long value = static_cast < long >(arg2->Value());
     vpz::Condition& cnd(obj->_vpz->project().experiment().
 			conditions().get(conditionname));
-  
+
     cnd.addValueToPort(portname, value::Integer::create(value));
   }
 }
@@ -852,7 +852,7 @@ void VleWrapper::condition_add_string(const FunctionCallbackInfo<Value>& args)
     std::string value = *String::Utf8Value(arg2);
     vpz::Condition& cnd(obj->_vpz->project().experiment().
 			conditions().get(conditionname));
-  
+
     cnd.addValueToPort(portname, value::String::create(value));
   }
 }
@@ -869,7 +869,7 @@ void VleWrapper::condition_add_boolean(const FunctionCallbackInfo<Value>& args)
     bool value = arg2->Value();
     vpz::Condition& cnd(obj->_vpz->project().experiment().
 			conditions().get(conditionname));
-  
+
     cnd.addValueToPort(portname, value::Boolean::create(value));
   }
 }
@@ -948,7 +948,7 @@ void VleWrapper::condition_get_value(const FunctionCallbackInfo<Value>& args)
     vpz::Condition& cnd(obj->_vpz->project().experiment().
 			conditions().get(conditionname));
     value::VectorValue& v(cnd.getSetValues(portname).value());
-  
+
     args.GetReturnValue().Set(convert_value(*v[index], isolate));
   }
 }
@@ -1012,14 +1012,14 @@ void VleWrapper::condition_get_value_type(const FunctionCallbackInfo<Value>&
 
 void VleWrapper::condition_delete_value(const FunctionCallbackInfo<Value>& args)
 {
-  if (args.Length() > 2) {  
+  if (args.Length() > 2) {
     VleWrapper* obj = ObjectWrap::Unwrap<VleWrapper>(args.Holder());
     Local < String > arg0 = args[0]->ToString();
     Local < String > arg1 = args[1]->ToString();
     Local < Number > arg2 = args[2]->ToNumber();
     std::string conditionname = *String::Utf8Value(arg0);
     std::string portname = *String::Utf8Value(arg1);
-    unsigned int index = static_cast < unsigned int >(arg2->Value());  
+    unsigned int index = static_cast < unsigned int >(arg2->Value());
     vpz::Condition& cnd(obj->_vpz->project().experiment().
 			conditions().get(conditionname));
     vle::value::VectorValue& vector(cnd.getSetValues(portname).value());
@@ -1051,7 +1051,7 @@ void VleWrapper::output_set_plugin(const FunctionCallbackInfo<Value>& args)
     std::string format = *String::Utf8Value(arg2);
     std::string plugin = *String::Utf8Value(arg3);
     std::string package = *String::Utf8Value(arg4);
-  
+
     vpz::Output& out(obj->_vpz->project().experiment().views().outputs().
 		     get(outputname));
 
@@ -1071,7 +1071,7 @@ void VleWrapper::outputs_list(const FunctionCallbackInfo<Value>& args)
 		       outputlist());
   Local < Array > result = Array::New(isolate);
   int i = 0;
-  
+
   for (vpz::OutputList::const_iterator it = lst.begin(); it != lst.end();
        ++it, ++i) {
     result->Set(i, String::NewFromUtf8(isolate, it->first.c_str()));
