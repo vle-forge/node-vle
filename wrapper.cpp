@@ -230,6 +230,15 @@ void build_path(const std::string& str, std::vector < std::string >& path)
     path.push_back(path2[0]);
     path.push_back(path3[0]);
     path.push_back(path3[1]);
+  } else {
+    std::vector < std::string > path2;
+    std::vector < std::string > path3;
+
+    split(path[0], ':', path2);
+    split(path2[path2.size() - 1], '.', path3);
+    path.pop_back();
+    path.push_back(path3[0]);
+    path.push_back(path3[1]);
   }
 }
 
@@ -382,7 +391,7 @@ value::Value* convert_to_vle(Local < Value > v)
 
 void ValueWrapper::New(const FunctionCallbackInfo<Value>& jsargs)
 {
-  Isolate* isolate = jsargs.GetIsolate();
+//  Isolate* isolate = jsargs.GetIsolate();
 
   if (jsargs.IsConstructCall()) {
     ValueWrapper* obj = new ValueWrapper();
@@ -448,7 +457,7 @@ void VleWrapper::Init(Handle<Object> exports)
 
 void VleWrapper::New(const FunctionCallbackInfo<Value>& jsargs)
 {
-  Isolate* isolate = jsargs.GetIsolate();
+//  Isolate* isolate = jsargs.GetIsolate();
 
   if (jsargs.IsConstructCall()) {
     Local < String > arg0 = jsargs[0]->ToString();
